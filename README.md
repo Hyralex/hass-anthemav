@@ -7,10 +7,10 @@ https://www.home-assistant.io/integrations/anthemav/
 
 # Installation
 
-* Download ./anthemav folder
+* Download folder ./anthemav
 * Copy the folder to your home assistant installation under ./config/custom_components
 * Restart Home Assistant
-* Then add the integration via UI `Anthem A/V Receivers [custom]` or click here
+* Then add the integration via UI `Anthem A/V Receivers Custom` or click here
 
 [![Add Integration to your Home Assistant instance.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=anthemav_custom)
 
