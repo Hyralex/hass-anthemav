@@ -4,7 +4,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-import anthemav_custom
+import anthemav
 from anthemav.connection import Connection
 from anthemav.device_error import DeviceError
 import voluptuous as vol
@@ -35,7 +35,7 @@ STEP_USER_DATA_SCHEMA = vol.Schema(
 
 async def connect_device(user_input: dict[str, Any]) -> Connection:
     """Connect to the AVR device."""
-    avr = await anthemav_custom.Connection.create(
+    avr = await anthemav.Connection.create(
         host=user_input[CONF_HOST], port=user_input[CONF_PORT], auto_reconnect=False
     )
     await avr.reconnect()
