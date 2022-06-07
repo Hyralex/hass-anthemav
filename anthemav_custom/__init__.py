@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import logging
 
-import anthemav_custom
+import anthemav
 from anthemav.device_error import DeviceError
 
 from homeassistant.config_entries import ConfigEntry
@@ -29,7 +29,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         async_dispatcher_send(hass, f"{ANTHEMAV_UDATE_SIGNAL}_{entry.data[CONF_NAME]}")
 
     try:
-        avr = await anthemav_custom.Connection.create(
+        avr = await anthemav.Connection.create(
             host=entry.data[CONF_HOST],
             port=entry.data[CONF_PORT],
             update_callback=async_anthemav_update_callback,
