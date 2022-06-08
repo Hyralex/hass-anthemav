@@ -20,6 +20,7 @@ List of additional features compare to Anthem AV integration
 * Add support for MRX-540, MRX-740 and MRX-1140
 * Add multi zone support (1 entity for each zone)
 * Add support for MDX-8, MDX-16 and Martin Logan equivalent MDA-8 and MDA-16
+* Add step volume (volume up and down)
 
 # Credits
 This package was originally created by David McNett (https://github.com/nugget) as part of Home Assistant Anthem Av integration.
