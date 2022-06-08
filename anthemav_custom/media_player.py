@@ -40,6 +40,8 @@ from .const import (
     MANUFACTURER,
 )
 
+VOLUME_STEP = 0.04
+
 _LOGGER = logging.getLogger(__name__)
 
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
@@ -98,6 +100,7 @@ class AnthemAVR(MediaPlayerEntity):
     _attr_should_poll = False
     _attr_supported_features = (
         MediaPlayerEntityFeature.VOLUME_SET
+        | MediaPlayerEntityFeature.VOLUME_STEP
         | MediaPlayerEntityFeature.VOLUME_MUTE
         | MediaPlayerEntityFeature.TURN_ON
         | MediaPlayerEntityFeature.TURN_OFF
@@ -169,7 +172,7 @@ class AnthemAVR(MediaPlayerEntity):
     @property
     def app_name(self) -> str | None:
         """Return details about current video and audio stream."""
-        return f"{self.avr.video_input_resolution_text} {self.avr.audio_input_name}"
+        return self._zone.input_format
 
     @property
     def source(self) -> str | None:
@@ -196,6 +199,18 @@ class AnthemAVR(MediaPlayerEntity):
     async def async_set_volume_level(self, volume: float) -> None:
         """Set AVR volume (0 to 1)."""
         self._zone.volume_as_percentage = volume
+
+    async def async_volume_up(self):
+        """Turn volume up for media player."""
+        volume = self.volume_level
+        if volume < 1:
+            await self.async_set_volume_level(min(1, volume + VOLUME_STEP))
+
+    async def async_volume_down(self):
+        """Turn volume down for media player."""
+        volume = self.volume_level
+        if volume > 0:
+            await self.async_set_volume_level(max(0, volume - VOLUME_STEP))
 
     async def async_mute_volume(self, mute: bool) -> None:
         """Engage AVR mute."""
