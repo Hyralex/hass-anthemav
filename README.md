@@ -17,11 +17,12 @@ https://www.home-assistant.io/integrations/anthemav/
 
 # Additional features
 List of additional features compare to Anthem AV integration
-* Add integration via UI (Home Assistant PR in progress: https://github.com/home-assistant/core/pull/53268)
-* Add support for MRX-540, MRX-740 and MRX-1140
-* Add multi zone support (1 entity for each zone)
-* Add support for MDX-8, MDX-16 and Martin Logan equivalent MDA-8 and MDA-16
+* Add integration via UI (Home Assistant PR merged. Release 2022.08: https://github.com/home-assistant/core/pull/53268)
+* Add support for MRX-540, MRX-740 and MRX-1140 (Home Assistant PR merged. Release 2022.08: https://github.com/home-assistant/core/pull/53268)
+* Add multi zone support (1 entity for each zone) (Home Assistant PR in progress: https://github.com/home-assistant/core/pull/74779)
+* Add support for MDX-8, MDX-16 and Martin Logan equivalent MDA-8 and MDA-16 (Home Assistant PR in progress: https://github.com/home-assistant/core/pull/74779)
 * Add step volume (volume up and down)
+* Add audio listening mode
 
 # Credits
 This package was originally created by David McNett (https://github.com/nugget) as part of Home Assistant Anthem Av integration.
