@@ -35,11 +35,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             update_callback=async_anthemav_update_callback,
         )
 
+        # Wait for the zones to be initialised based on the model
         await avr.protocol.wait_for_device_initialised(DEVICE_TIMEOUT_SECONDS)
-
-    except OSError as err:
-        raise ConfigEntryNotReady from err
-    except DeviceError as err:
+    except (OSError, DeviceError) as err:
         raise ConfigEntryNotReady from err
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = avr

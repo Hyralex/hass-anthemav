@@ -2,11 +2,9 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
 
 from anthemav.connection import Connection
 from anthemav.protocol import AVR
-
 import voluptuous as vol
 
 from homeassistant.components.media_player import (
@@ -84,19 +82,19 @@ async def async_setup_entry(
 
     entities = []
     for zone in avr.protocol.zones:
-        _LOGGER.debug("Initialize Zone %s", zone)
-        device = AnthemAVR(avr.protocol, name, macaddress, model, zone)
-        entities.append(device)
+        _LOGGER.debug("Initializing Zone %s", zone)
+        entity = AnthemAVR(avr.protocol, name, macaddress, model, zone)
+        entities.append(entity)
+
+    _LOGGER.debug("dump_conndata: %s", avr.dump_conndata)
 
     async_add_entities(entities)
-
-    _LOGGER.debug("dump_devicedata: %s", device.dump_avrdata)
-    _LOGGER.debug("dump_conndata: %s", avr.dump_conndata)
 
 
 class AnthemAVR(MediaPlayerEntity):
     """Entity reading values from Anthem AVR protocol."""
 
+    _attr_has_entity_name = True
     _attr_should_poll = False
     _attr_supported_features = (
         MediaPlayerEntityFeature.VOLUME_SET
@@ -117,11 +115,11 @@ class AnthemAVR(MediaPlayerEntity):
         self._zone = avr.zones[zone_number]
         self._device_name = name
         if zone_number > 1:
-            self._attr_name = f"{name} Zone {zone_number}"
-        else:
-            self._attr_name = name
+            self._attr_name = f"zone {zone_number}"
 
-        self._attr_device_class = MediaPlayerDeviceClass.RECEIVER
+        if self._zone.support_audio_listening_mode:
+            self._attr_supported_features |= MediaPlayerEntityFeature.SELECT_SOUND_MODE
+
         self._attr_unique_id = f"{macaddress}_{zone_number}"
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, macaddress)},
@@ -129,9 +127,9 @@ class AnthemAVR(MediaPlayerEntity):
             manufacturer=MANUFACTURER,
             model=model,
         )
-
-    def _lookup(self, propname: str, dval: Any | None = None) -> Any | None:
-        return getattr(self.avr, propname, dval)
+        self._attr_device_class = MediaPlayerDeviceClass.RECEIVER
+        self._attr_icon = "mdi:audio-video"
+        self.set_states()
 
     async def async_added_to_hass(self) -> None:
         """When entity is added to hass."""
@@ -139,50 +137,34 @@ class AnthemAVR(MediaPlayerEntity):
             async_dispatcher_connect(
                 self.hass,
                 f"{ANTHEMAV_UDATE_SIGNAL}_{self._device_name}",
-                self.async_write_ha_state,
+                self.update_states,
             )
         )
 
-    @property
-    def state(self) -> str | None:
-        """Return state of power on/off."""
-        pwrstate = self._zone.power
+    def update_states(self) -> None:
+        """Update states for the current zone."""
+        self.set_states()
+        self.async_write_ha_state()
 
-        if pwrstate is True:
-            return STATE_ON
-        if pwrstate is False:
-            return STATE_OFF
-        return None
+    def set_states(self) -> None:
+        """Set all the states from the device to the entity."""
+        self._attr_state = STATE_ON if self._zone.power is True else STATE_OFF
+        self._attr_is_volume_muted = self._zone.mute
+        self._attr_volume_level = self._zone.volume_as_percentage
+        self._attr_media_title = self._zone.input_name
+        self._attr_app_name = self._zone.input_format
+        self._attr_source = self._zone.input_name
+        self._attr_source_list = self.avr.input_list
+        if self._zone.support_audio_listening_mode:
+            if self.state is STATE_OFF:
+                self._attr_sound_mode_list = None
+            else:
+                self._attr_sound_mode_list = self.avr.audio_listening_mode_list
+                self._attr_sound_mode = self.avr.audio_listening_mode_text
 
-    @property
-    def is_volume_muted(self) -> bool | None:
-        """Return boolean reflecting mute state on device."""
-        return self._zone.mute
-
-    @property
-    def volume_level(self) -> float | None:
-        """Return volume level from 0 to 1."""
-        return self._zone.volume_as_percentage
-
-    @property
-    def media_title(self) -> str | None:
-        """Return current input name (closest we have to media title)."""
-        return self._zone.input_name
-
-    @property
-    def app_name(self) -> str | None:
-        """Return details about current video and audio stream."""
-        return self._zone.input_format
-
-    @property
-    def source(self) -> str | None:
-        """Return currently selected input."""
-        return self._zone.input_name
-
-    @property
-    def source_list(self) -> list[str] | None:
-        """Return all active, configured inputs."""
-        return self.avr.input_list
+    async def async_select_sound_mode(self, sound_mode):
+        """Switch the sound mode of the entity."""
+        self.avr.audio_listening_mode_text = sound_mode
 
     async def async_select_source(self, source: str) -> None:
         """Change AVR to the designated source (by name)."""
@@ -215,10 +197,3 @@ class AnthemAVR(MediaPlayerEntity):
     async def async_mute_volume(self, mute: bool) -> None:
         """Engage AVR mute."""
         self._zone.mute = mute
-
-    @property
-    def dump_avrdata(self):
-        """Return state of avr object for debugging forensics."""
-        attrs = vars(self)
-        items_string = ", ".join(f"{item}: {item}" for item in attrs.items())
-        return f"dump_avrdata: {items_string}"
