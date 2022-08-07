@@ -28,8 +28,6 @@ List of additional features compared to the official Anthem AV integration in Ho
 # debugging
 For any problems, please add this to your configuration.yaml file to enable all the logs
 
-::
-
     logger:
         default: info
         logs:
