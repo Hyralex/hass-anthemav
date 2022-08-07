@@ -16,13 +16,26 @@ https://www.home-assistant.io/integrations/anthemav/
 [![Add Integration to your Home Assistant instance.](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=anthemav_custom)
 
 # Additional features
-List of additional features compare to Anthem AV integration
-* Add integration via UI (Home Assistant PR merged. Release 2022.08: https://github.com/home-assistant/core/pull/53268)
-* Add support for MRX-540, MRX-740 and MRX-1140 (Home Assistant PR merged. Release 2022.08: https://github.com/home-assistant/core/pull/53268)
-* Add multi zone support (1 entity for each zone) (Home Assistant PR in progress: https://github.com/home-assistant/core/pull/74779)
-* Add support for MDX-8, MDX-16 and Martin Logan equivalent MDA-8 and MDA-16 (Home Assistant PR in progress: https://github.com/home-assistant/core/pull/74779)
+List of additional features compared to the official Anthem AV integration in Home Assistant (actual or planned release for the feature)
+* Add integration via UI (HA Release 2022.08: https://github.com/home-assistant/core/pull/53268)
+* Add support for MRX-540, MRX-740 and MRX-1140 (HA Release - 2022.08: https://github.com/home-assistant/core/pull/53268)
+* Add multi zone support (1 entity for each zone) (HA Release - 2022.09: https://github.com/home-assistant/core/pull/74779)
+* Add support for MDX-8, MDX-16 and Martin Logan equivalent MDA-8 and MDA-16 (HA Release - 2022.09: https://github.com/home-assistant/core/pull/74779)
 * Add step volume (volume up and down)
 * Add audio listening mode
+* Add switch for ARC (Anthem Room Correction)
+
+# debugging
+For any problems, please add this to your configuration.yaml file to enable all the logs
+
+::
+
+    logger:
+        default: info
+        logs:
+            homeassistant.components.anthemav: debug
+            custom_components.anthemav_custom: debug
+            anthemav: debug
 
 # Credits
 This package was originally created by David McNett (https://github.com/nugget) as part of Home Assistant Anthem Av integration.

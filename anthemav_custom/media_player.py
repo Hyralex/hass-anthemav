@@ -13,6 +13,7 @@ from homeassistant.components.media_player import (
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
 )
+from homeassistant.components.repairs import IssueSeverity, async_create_issue
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
 from homeassistant.const import (
     CONF_HOST,
@@ -24,21 +25,13 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant
 import homeassistant.helpers.config_validation as cv
-from homeassistant.helpers.dispatcher import async_dispatcher_connect
-from homeassistant.helpers.entity import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
-from .const import (
-    ANTHEMAV_UDATE_SIGNAL,
-    CONF_MODEL,
-    DEFAULT_NAME,
-    DEFAULT_PORT,
-    DOMAIN,
-    MANUFACTURER,
-)
+from . import AnthemAVEntity
+from .const import CONF_MODEL, DEFAULT_NAME, DEFAULT_PORT, DOMAIN
 
-VOLUME_STEP = 0.04
+VOLUME_STEP = 0.01
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -58,8 +51,20 @@ async def async_setup_platform(
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up our socket to the AVR."""
+    async_create_issue(
+        hass,
+        DOMAIN,
+        "deprecated_yaml",
+        breaks_in_ha_version="2022.10.0",
+        is_fixable=False,
+        severity=IssueSeverity.WARNING,
+        translation_key="deprecated_yaml",
+    )
     _LOGGER.warning(
-        "AnthemAV configuration is deprecated and has been automatically imported. Please remove the integration from your configuration file"
+        "Configuration of the Anthem A/V Receivers integration in YAML is "
+        "deprecated and will be removed in Home Assistant 2022.10; Your "
+        "existing configuration has been imported into the UI automatically "
+        "and can be safely removed from your configuration.yaml file"
     )
     await hass.config_entries.flow.async_init(
         DOMAIN,
@@ -75,27 +80,29 @@ async def async_setup_entry(
 ) -> None:
     """Set up entry."""
     name = config_entry.data[CONF_NAME]
-    macaddress = config_entry.data[CONF_MAC]
+    mac_address = config_entry.data[CONF_MAC]
     model = config_entry.data[CONF_MODEL]
 
     avr: Connection = hass.data[DOMAIN][config_entry.entry_id]
 
     entities = []
-    for zone in avr.protocol.zones:
-        _LOGGER.debug("Initializing Zone %s", zone)
-        entity = AnthemAVR(avr.protocol, name, macaddress, model, zone)
+    for zone_number in avr.protocol.zones:
+        _LOGGER.debug("Initializing Zone %s", zone_number)
+        entity = AnthemAVR(
+            avr.protocol, name, mac_address, model, zone_number, config_entry.entry_id
+        )
         entities.append(entity)
 
-    _LOGGER.debug("dump_conndata: %s", avr.dump_conndata)
+    _LOGGER.debug("Connection data dump: %s", avr.dump_conndata)
 
     async_add_entities(entities)
 
 
-class AnthemAVR(MediaPlayerEntity):
+class AnthemAVR(AnthemAVEntity, MediaPlayerEntity):
     """Entity reading values from Anthem AVR protocol."""
 
-    _attr_has_entity_name = True
-    _attr_should_poll = False
+    _attr_device_class = MediaPlayerDeviceClass.RECEIVER
+    _attr_icon = "mdi:audio-video"
     _attr_supported_features = (
         MediaPlayerEntityFeature.VOLUME_SET
         | MediaPlayerEntityFeature.VOLUME_STEP
@@ -106,45 +113,32 @@ class AnthemAVR(MediaPlayerEntity):
     )
 
     def __init__(
-        self, avr: AVR, name: str, macaddress: str, model: str, zone_number: int
+        self,
+        avr: AVR,
+        name: str,
+        mac_address: str,
+        model: str,
+        zone_number: int,
+        entry_id: str,
     ) -> None:
         """Initialize entity with transport."""
-        super().__init__()
+        super().__init__(avr, name, mac_address, model, entry_id)
         self.avr = avr
+        self._entry_id = entry_id
         self._zone_number = zone_number
         self._zone = avr.zones[zone_number]
-        self._device_name = name
         if zone_number > 1:
             self._attr_name = f"zone {zone_number}"
+            self._attr_unique_id = f"{mac_address}_{zone_number}"
+        else:
+            self._attr_unique_id = mac_address
 
-        if self._zone.support_audio_listening_mode:
+        self._support_sound_mode = zone_number == 1 and avr.support_audio_listening_mode
+
+        if self._support_sound_mode:
             self._attr_supported_features |= MediaPlayerEntityFeature.SELECT_SOUND_MODE
 
-        self._attr_unique_id = f"{macaddress}_{zone_number}"
-        self._attr_device_info = DeviceInfo(
-            identifiers={(DOMAIN, macaddress)},
-            name=name,
-            manufacturer=MANUFACTURER,
-            model=model,
-        )
-        self._attr_device_class = MediaPlayerDeviceClass.RECEIVER
-        self._attr_icon = "mdi:audio-video"
         self.set_states()
-
-    async def async_added_to_hass(self) -> None:
-        """When entity is added to hass."""
-        self.async_on_remove(
-            async_dispatcher_connect(
-                self.hass,
-                f"{ANTHEMAV_UDATE_SIGNAL}_{self._device_name}",
-                self.update_states,
-            )
-        )
-
-    def update_states(self) -> None:
-        """Update states for the current zone."""
-        self.set_states()
-        self.async_write_ha_state()
 
     def set_states(self) -> None:
         """Set all the states from the device to the entity."""
@@ -155,14 +149,14 @@ class AnthemAVR(MediaPlayerEntity):
         self._attr_app_name = self._zone.input_format
         self._attr_source = self._zone.input_name
         self._attr_source_list = self.avr.input_list
-        if self._zone.support_audio_listening_mode:
+        if self._support_sound_mode:
             if self.state is STATE_OFF:
                 self._attr_sound_mode_list = None
             else:
                 self._attr_sound_mode_list = self.avr.audio_listening_mode_list
                 self._attr_sound_mode = self.avr.audio_listening_mode_text
 
-    async def async_select_sound_mode(self, sound_mode):
+    async def async_select_sound_mode(self, sound_mode: str) -> None:
         """Switch the sound mode of the entity."""
         self.avr.audio_listening_mode_text = sound_mode
 
@@ -182,16 +176,16 @@ class AnthemAVR(MediaPlayerEntity):
         """Set AVR volume (0 to 1)."""
         self._zone.volume_as_percentage = volume
 
-    async def async_volume_up(self):
+    async def async_volume_up(self) -> None:
         """Turn volume up for media player."""
         volume = self.volume_level
-        if volume < 1:
+        if volume and volume < 1:
             await self.async_set_volume_level(min(1, volume + VOLUME_STEP))
 
-    async def async_volume_down(self):
+    async def async_volume_down(self) -> None:
         """Turn volume down for media player."""
         volume = self.volume_level
-        if volume > 0:
+        if volume and volume > 0:
             await self.async_set_volume_level(max(0, volume - VOLUME_STEP))
 
     async def async_mute_volume(self, mute: bool) -> None:
