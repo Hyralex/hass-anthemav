@@ -13,7 +13,6 @@ from homeassistant.components.media_player import (
     MediaPlayerEntity,
     MediaPlayerEntityFeature,
 )
-from homeassistant.components.repairs import IssueSeverity, async_create_issue
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
 from homeassistant.const import (
     CONF_HOST,
@@ -26,6 +25,7 @@ from homeassistant.const import (
 from homeassistant.core import HomeAssistant
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.issue_registry import IssueSeverity, async_create_issue
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 
 from . import AnthemAVEntity
@@ -85,17 +85,14 @@ async def async_setup_entry(
 
     avr: Connection = hass.data[DOMAIN][config_entry.entry_id]
 
-    entities = []
-    for zone_number in avr.protocol.zones:
-        _LOGGER.debug("Initializing Zone %s", zone_number)
-        entity = AnthemAVR(
-            avr.protocol, name, mac_address, model, zone_number, config_entry.entry_id
-        )
-        entities.append(entity)
-
     _LOGGER.debug("Connection data dump: %s", avr.dump_conndata)
 
-    async_add_entities(entities)
+    async_add_entities(
+        AnthemAVR(
+            avr.protocol, name, mac_address, model, zone_number, config_entry.entry_id
+        )
+        for zone_number in avr.protocol.zones
+    )
 
 
 class AnthemAVR(AnthemAVEntity, MediaPlayerEntity):
