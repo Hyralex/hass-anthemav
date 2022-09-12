@@ -7,5 +7,8 @@
   "iot_class": "local_push",
   "loggers": ["anthemav"],
   "version": "1.1.4",
-  "config_flow": true
+  "config_flow": true,
+  "supported_brands": {
+    "martin_logan": "Martin Logan"
+  }
 }
