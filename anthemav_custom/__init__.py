@@ -48,7 +48,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     hass.data.setdefault(DOMAIN, {})[entry.entry_id] = avr
 
-    hass.config_entries.async_setup_platforms(entry, PLATFORMS)
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
 
     @callback
     def close_avr(event: Event) -> None:
@@ -88,7 +88,7 @@ class AnthemAVEntity(Entity):
         """Initialize base AnthemAV entity."""
         self.avr = avr
         self._entry_id = entry_id
-        self._device_info = DeviceInfo(
+        self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, mac_address)},
             name=name,
             manufacturer=MANUFACTURER,
